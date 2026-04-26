@@ -1,0 +1,34 @@
+{
+  "industry_type": "real_estate",
+  "welcome_message": "Welcome to {company_name}! Find your dream property with us.",
+  "steps": [
+    {
+      "id": "location",
+      "type": "single_choice",
+      "text": "📍 Select your preferred location:",
+      "options": ["OMR", "Velachery", "Adyar", "T Nagar"],
+      "next_step": "budget"
+    },
+    {
+      "id": "budget",
+      "type": "single_choice",
+      "text": "💰 What's your budget range?",
+      "options": ["Below 80L", "80L-1.2Cr", "Above 1.2Cr"],
+      "next_step": "contact_info"
+    },
+    {
+      "id": "contact_info",
+      "type": "text",
+      "text": "📞 Please share your name and phone number\nFormat: Name, Phone\nExample: Umesh, 919711731299",
+      "next_step": "complete"
+    }
+  ],
+  "confirmation_template": "✅ Thank you {name}!\n\nWe have received your property inquiry for {location}.\n\nBudget: {budget}\nOur agent will contact you shortly.\n\nHave a great day! 🏡",
+  "scoring_rules": {
+    "budget": {
+      "Above 1.2Cr": 10,
+      "80L-1.2Cr": 7,
+      "Below 80L": 5
+    }
+  }
+}

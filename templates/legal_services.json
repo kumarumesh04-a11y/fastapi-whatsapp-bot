@@ -1,0 +1,47 @@
+{
+  "industry_type": "legal_services",
+  "welcome_message": "Welcome to {company_name}. We provide expert legal assistance. Let's understand your needs.",
+  "steps": [
+    {
+      "id": "case_type",
+      "type": "single_choice",
+      "text": "What type of legal matter do you need help with?",
+      "options": ["Property Dispute", "Family Matter", "Criminal Case", "Corporate Law"],
+      "next_step": "urgency"
+    },
+    {
+      "id": "urgency",
+      "type": "single_choice",
+      "text": "How urgent is your matter?",
+      "options": ["Immediate", "This week", "Planning ahead"],
+      "next_step": "jurisdiction"
+    },
+    {
+      "id": "jurisdiction",
+      "type": "single_choice",
+      "text": "Which jurisdiction applies to your case?",
+      "options": ["Delhi High Court", "District Court", "NCLT", "Other"],
+      "next_step": "contact_info"
+    },
+    {
+      "id": "contact_info",
+      "type": "text",
+      "text": "Please share your name and phone number\nFormat: Name, Phone\nExample: Rahul Sharma, 919876543210",
+      "next_step": "complete"
+    }
+  ],
+  "confirmation_template": "✅ Thank you {name}!\n\nOur legal team will review your {case_type} matter and contact you within 24 hours.\n\nUrgency: {urgency}\nHave a great day! ⚖️",
+  "scoring_rules": {
+    "urgency": {
+      "Immediate": 10,
+      "This week": 6,
+      "Planning ahead": 3
+    },
+    "case_type": {
+      "Criminal Case": 10,
+      "Property Dispute": 7,
+      "Family Matter": 6,
+      "Corporate Law": 5
+    }
+  }
+}
