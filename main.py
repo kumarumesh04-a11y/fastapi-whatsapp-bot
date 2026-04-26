@@ -150,11 +150,13 @@ async def process_message(phone: str, name: str, message: str, interactive_data:
                 client_id = None
         
         # Handle friendly "Greetings from {Company Name}" messages
+        # FIXED: "Greetings from " is 15 characters, not 12
         if not client_id and message and message.lower().startswith('greetings from'):
-            # Extract company name from message
-            # Example: "Greetings from MAURYA & MAURYA ADVOCATES"
-            company_part = message[12:]  # Remove "Greetings from "
-            company_name = company_part.strip()
+            # "Greetings from " = 15 characters
+            # G r e e t i n g s space f r o m space
+            # 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
+            company_name = message[15:].strip()
+            logger.info(f"Extracted company name: '{company_name}' from message: '{message}'")
             
             # Search for client by company name
             client = get_client_by_company_name(company_name)
@@ -162,8 +164,20 @@ async def process_message(phone: str, name: str, message: str, interactive_data:
                 client_id = client['id']
                 logger.info(f"✅ Greetings message mapped to client {client_id} ({company_name})")
             else:
-                await wa.send_text(phone, f"Welcome! We couldn't find '{company_name}'. Please scan the QR code from the business to start.")
-                return
+                # Try partial match as fallback
+                from database import get_all_clients
+                all_clients = get_all_clients()
+                found = False
+                for c in all_clients:
+                    if c['company_name'].lower() in message.lower():
+                        client_id = c['id']
+                        logger.info(f"✅ Partial match: '{c['company_name']}' found in message, mapped to client {client_id}")
+                        found = True
+                        break
+                
+                if not found:
+                    await wa.send_text(phone, "Welcome! Please scan the QR code from the business to start.")
+                    return
         
         # Check session for existing client_id
         if not client_id and session.get('client_id'):

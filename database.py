@@ -98,7 +98,23 @@ def get_client_by_company_name(company_name: str) -> Optional[Dict]:
     except Exception as e:
         logger.error(f"Error getting client by company name: {e}")
         return None
-    
+
+def get_all_clients(limit: int = 100) -> List[Dict]:
+    """
+    Get all clients (for fallback matching)
+    """
+    try:
+        with get_db_conn() as conn:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT id, company_name, email, phone, industry_type, subscription_status
+                FROM clients LIMIT %s
+            """, (limit,))
+            return cursor.fetchall()
+    except Exception as e:
+        logger.error(f"Error getting all clients: {e}")
+        return []
+        
 def get_client_by_whatsapp_number(whatsapp_number: str) -> Optional[Dict]:
     """
     Get client by their WhatsApp business number
