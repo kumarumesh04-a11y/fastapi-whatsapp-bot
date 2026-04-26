@@ -198,11 +198,11 @@ async def generate_qr_code(client_id: str):
     try:
         os.makedirs("static/qrcodes", exist_ok=True)
         
-        # Your test phone number (formatted without + or spaces)
-        phone_number = "918438813814"
+        # Maurya & Maurya's WhatsApp number
+        phone_number = "918595445572"
         
-        # Create QR code that opens WhatsApp with your test number
-        qr_data = f"https://wa.me/{phone_number}?text=START_{client_id}"
+        # Create QR code that opens WhatsApp with "Greetings" message
+        qr_data = f"https://wa.me/{phone_number}?text=Greetings"
         
         qr = qrcode.QRCode(
             version=1,
