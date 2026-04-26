@@ -176,69 +176,72 @@ class FlowEngine:
             }
         return None
     
-async def _complete_flow(self, phone: str, client: Dict, flow_config: Dict, 
-                        responses: Dict, wa: Any):
-    """Complete conversation and save lead"""
-    # Calculate lead score
-    lead_score = self._calculate_score(responses, flow_config.get('scoring_rules', {}))
-    
-    # Extract name (handles both dict and string formats)
-    if 'name' in responses:
-        name_value = responses['name']
-        if isinstance(name_value, dict):
-            name = name_value.get('value', 'Unknown')
-        else:
-            name = str(name_value)
-    else:
-        name = 'Unknown'
-    
-    # Extract phone (handles both dict and string formats)
-    if 'phone' in responses:
-        phone_value = responses['phone']
-        if isinstance(phone_value, dict):
-            contact_phone = phone_value.get('value', phone)
-        else:
-            contact_phone = str(phone_value)
-    else:
-        contact_phone = phone
-    
-    # Build lead data
-    lead_data = {}
-    for key, val in responses.items():
-        if key not in ['name', 'phone']:
-            if isinstance(val, dict):
-                lead_data[key] = val.get('value', val)
+    async def _complete_flow(self, phone: str, client: Dict, flow_config: Dict, 
+                            responses: Dict, wa: Any):
+        """Complete conversation and save lead"""
+        # Calculate lead score
+        lead_score = self._calculate_score(responses, flow_config.get('scoring_rules', {}))
+        
+        # Extract name (handles both dict and string formats)
+        if 'name' in responses:
+            name_value = responses['name']
+            if isinstance(name_value, dict):
+                name = name_value.get('value', 'Unknown')
             else:
-                lead_data[key] = val
-    
-    # Save lead
-    from database import create_lead, clear_user_session
-    lead_id = create_lead(
-        client_id=client['id'],
-        name=name,
-        phone=contact_phone,
-        lead_data=lead_data,
-        lead_score=lead_score
-    )
-    
-    if lead_id > 0:
-        # Send confirmation
-        template = flow_config.get('confirmation_template', 
-                                  'Thank you {name}. We will contact you soon.')
-        confirmation = self._render_template(template, responses, name)
-        await wa.send_text(phone, confirmation)
-    else:
-        await wa.send_text(phone, "Sorry, there was an error saving your information. Please try again.")
-    
-    # Clear session
-    clear_user_session(phone)
+                name = str(name_value)
+        else:
+            name = 'Unknown'
+        
+        # Extract phone (handles both dict and string formats)
+        if 'phone' in responses:
+            phone_value = responses['phone']
+            if isinstance(phone_value, dict):
+                contact_phone = phone_value.get('value', phone)
+            else:
+                contact_phone = str(phone_value)
+        else:
+            contact_phone = phone
+        
+        # Build lead data
+        lead_data = {}
+        for key, val in responses.items():
+            if key not in ['name', 'phone']:
+                if isinstance(val, dict):
+                    lead_data[key] = val.get('value', val)
+                else:
+                    lead_data[key] = val
+        
+        # Save lead
+        from database import create_lead, clear_user_session
+        lead_id = create_lead(
+            client_id=client['id'],
+            name=name,
+            phone=contact_phone,
+            lead_data=lead_data,
+            lead_score=lead_score
+        )
+        
+        if lead_id > 0:
+            # Send confirmation
+            template = flow_config.get('confirmation_template', 
+                                      'Thank you {name}. We will contact you soon.')
+            confirmation = self._render_template(template, responses, name)
+            await wa.send_text(phone, confirmation)
+        else:
+            await wa.send_text(phone, "Sorry, there was an error saving your information. Please try again.")
+        
+        # Clear session
+        clear_user_session(phone)
     
     def _calculate_score(self, responses: Dict, scoring_rules: Dict) -> int:
         """Calculate lead score based on responses"""
         score = 0
         for question_id, rules in scoring_rules.items():
             response = responses.get(question_id, {})
-            answer_value = response.get('value', '')
+            if isinstance(response, dict):
+                answer_value = response.get('value', '')
+            else:
+                answer_value = str(response)
             if answer_value in rules:
                 score += rules[answer_value]
         return min(score, 100)  # Cap at 100
