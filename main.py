@@ -136,11 +136,15 @@ async def process_message(phone: str, name: str, message: str, interactive_data:
         
         if message and message.startswith("START_"):
             parts = message.split("_")
-            if len(parts) >= 3:
-                try:
+            try:
+                if len(parts) == 2:
+                    client_id = int(parts[1])
+                elif len(parts) >= 3:    
                     client_id = int(parts[2])
-                except ValueError:
+                else:
                     client_id = None
+            except ValueError:
+                client_id = None
         
         if not client_id and session.get('client_id'):
             client_id = session['client_id']
