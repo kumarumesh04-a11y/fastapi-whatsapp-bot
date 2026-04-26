@@ -30,7 +30,7 @@ try:
         pool_reset_session=True,
         **DB_CONFIG,
     )
-    logger.info("MySQL connection pool initialized")
+    logger.info("MySQL connection pool initialized successfully")
 except Exception as e:
     logger.error(f"Failed to create MySQL pool: {e}")
     cnxpool = None

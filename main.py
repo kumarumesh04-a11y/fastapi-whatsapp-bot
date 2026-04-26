@@ -40,6 +40,18 @@ flow_engine = FlowEngine()
 
 VERIFY_TOKEN = os.getenv("WEBHOOK_VERIFY_TOKEN", "ganpatiai_2025_secret")
 
+@app.get("/test-db")
+async def test_db():
+    try:
+        from database import get_client_by_id
+        client = get_client_by_id(1)
+        if client:
+            return {"status": "connected", "client": client["company_name"]}
+        else:
+            return {"status": "connected but client not found"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+    
 @app.get("/", response_class=HTMLResponse)
 async def landing_page(request: Request):
     return HTMLResponse(content="""
