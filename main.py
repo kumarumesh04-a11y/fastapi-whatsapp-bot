@@ -13,6 +13,7 @@ from database import (
     get_client_by_id,
     get_client_by_phone_number,
     get_client_by_company_name,
+    get_all_clients,
     get_flow_config,
     get_user_session,
     update_user_session,
@@ -150,32 +151,27 @@ async def process_message(phone: str, name: str, message: str, interactive_data:
                 client_id = None
         
         # Handle friendly "Greetings from {Company Name}" messages
-        # FIXED: "Greetings from " is 15 characters, not 12
         if not client_id and message and message.lower().startswith('greetings from'):
-            # "Greetings from " = 15 characters
-            # G r e e t i n g s space f r o m space
-            # 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
+            # Extract company name - "Greetings from " is 15 characters
             company_name = message[15:].strip()
             logger.info(f"Extracted company name: '{company_name}' from message: '{message}'")
             
-            # Search for client by company name
+            # Try exact match first
             client = get_client_by_company_name(company_name)
             if client:
                 client_id = client['id']
-                logger.info(f"✅ Greetings message mapped to client {client_id} ({company_name})")
+                logger.info(f"✅ Exact match: {company_name} -> client {client_id}")
             else:
-                # Try partial match as fallback
-                from database import get_all_clients
+                # Try partial match - find client whose name contains the extracted text
                 all_clients = get_all_clients()
-                found = False
                 for c in all_clients:
-                    if c['company_name'].lower() in message.lower():
+                    db_name = c['company_name']
+                    if company_name.lower() in db_name.lower():
                         client_id = c['id']
-                        logger.info(f"✅ Partial match: '{c['company_name']}' found in message, mapped to client {client_id}")
-                        found = True
+                        logger.info(f"✅ Partial match: '{company_name}' found in '{db_name}' -> client {client_id}")
                         break
                 
-                if not found:
+                if not client_id:
                     await wa.send_text(phone, "Welcome! Please scan the QR code from the business to start.")
                     return
         
