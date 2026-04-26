@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from dotenv import load_dotenv
+from urllib.parse import quote
 
 from database import (
     get_db_conn,
@@ -224,6 +225,7 @@ async def process_message(phone: str, name: str, message: str, interactive_data:
 async def generate_qr_code(client_id: str):
     import qrcode
     from fastapi.responses import FileResponse
+    from urllib.parse import quote  # ADD THIS IMPORT
     
     try:
         os.makedirs("static/qrcodes", exist_ok=True)
@@ -241,8 +243,11 @@ async def generate_qr_code(client_id: str):
         # Create friendly message with company name
         friendly_message = f"Greetings from {company_name}"
         
-        # Create QR code with friendly message
-        qr_data = f"https://wa.me/{phone_number}?text={friendly_message}"
+        # URL ENCODE the message - THIS IS THE FIX
+        encoded_message = quote(friendly_message)
+        
+        # Create QR code with encoded message
+        qr_data = f"https://wa.me/{phone_number}?text={encoded_message}"
         
         qr = qrcode.QRCode(
             version=1,
@@ -258,6 +263,7 @@ async def generate_qr_code(client_id: str):
         img.save(file_path)
         
         logger.info(f"QR code generated for client {client_id}: {friendly_message}")
+        logger.info(f"Encoded URL: {qr_data}")
         
         return FileResponse(file_path, media_type="image/png", filename=f"{client_id}.png")
         
