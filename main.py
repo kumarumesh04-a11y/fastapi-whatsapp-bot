@@ -12,7 +12,7 @@ from database import (
     get_db_conn,
     get_client_by_id,
     get_client_by_phone_number,
-    get_client_by_whatsapp_number,  # ADDED THIS
+    get_client_by_whatsapp_number,
     get_flow_config,
     get_user_session,
     update_user_session,
@@ -135,7 +135,7 @@ async def process_message(phone: str, name: str, message: str, interactive_data:
         
         client_id = None
         
-        # Handle START_ trigger (QR code scan)
+        # Handle START_ trigger (QR code scan) - THIS IS THE PRIMARY METHOD
         if message and message.startswith("START_"):
             parts = message.split("_")
             try:
@@ -145,26 +145,13 @@ async def process_message(phone: str, name: str, message: str, interactive_data:
                     client_id = int(parts[2])
                 else:
                     client_id = None
+                logger.info(f"START_ message detected. Extracted client_id: {client_id}")
             except ValueError:
                 client_id = None
         
         # Check session for existing client_id
         if not client_id and session.get('client_id'):
             client_id = session['client_id']
-        
-        # Handle "Greetings" - dynamically route based on receiving WhatsApp number
-        if not client_id and message and message.lower() == 'greetings':
-            if receiving_number:
-                client = get_client_by_whatsapp_number(receiving_number)
-                if client:
-                    client_id = client['id']
-                    logger.info(f"✅ Greetings from {phone} routed to client {client_id} ({client['company_name']}) via number {receiving_number}")
-                else:
-                    await wa.send_text(phone, "Welcome! No business found for this number. Please scan the QR code from the business.")
-                    return
-            else:
-                await wa.send_text(phone, "Welcome! Please scan the QR code provided by the business to start.")
-                return
         
         if not client_id:
             await wa.send_text(phone, "Welcome to Ganpati AI. Please scan the QR code provided by the business to start.")
@@ -215,15 +202,12 @@ async def generate_qr_code(client_id: str):
     try:
         os.makedirs("static/qrcodes", exist_ok=True)
         
-        # Get client's WhatsApp number from database
-        client = get_client_by_id(int(client_id))
-        if client and client.get('whatsapp_business_number'):
-            phone_number = client['whatsapp_business_number']
-        else:
-            phone_number = "918595445572"  # Default to Maurya & Maurya
+        # Your single WhatsApp business number
+        phone_number = "918438813814"
         
-        # Create QR code that opens WhatsApp with "Greetings" message
-        qr_data = f"https://wa.me/{phone_number}?text=Greetings"
+        # Create QR code that opens WhatsApp with START_{client_id}
+        # This identifies which client the user is contacting
+        qr_data = f"https://wa.me/{phone_number}?text=START_{client_id}"
         
         qr = qrcode.QRCode(
             version=1,
@@ -237,6 +221,8 @@ async def generate_qr_code(client_id: str):
         img = qr.make_image(fill_color="black", back_color="white")
         file_path = f"static/qrcodes/{client_id}.png"
         img.save(file_path)
+        
+        logger.info(f"QR code generated for client {client_id} with START_{client_id}")
         
         return FileResponse(file_path, media_type="image/png", filename=f"{client_id}.png")
         
