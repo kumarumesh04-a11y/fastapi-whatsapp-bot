@@ -64,7 +64,7 @@ def get_client_by_id(client_id: int) -> Optional[Dict]:
         with get_db_conn() as conn:
             cursor = conn.cursor(dictionary=True)
             cursor.execute("""
-                SELECT id, company_name, email, phone, industry_type,
+                SELECT id, company_name, email, phone, whatsapp_business_number, industry_type,
                        subscription_status, trial_ends_at, max_leads_month, leads_count_month
                 FROM clients WHERE id = %s
             """, (client_id,))
@@ -84,6 +84,22 @@ def get_client_by_phone_number(phone_number: str) -> Optional[Dict]:
             return cursor.fetchone()
     except Exception as e:
         logger.error(f"Error getting client by phone: {e}")
+        return None
+
+def get_client_by_whatsapp_number(whatsapp_number: str) -> Optional[Dict]:
+    """
+    Get client by their WhatsApp business number
+    """
+    try:
+        with get_db_conn() as conn:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT id, company_name, email, phone, whatsapp_business_number, industry_type, subscription_status
+                FROM clients WHERE whatsapp_business_number = %s
+            """, (whatsapp_number,))
+            return cursor.fetchone()
+    except Exception as e:
+        logger.error(f"Error getting client by whatsapp number: {e}")
         return None
 
 def get_flow_config(client_id: int) -> Optional[Dict]:

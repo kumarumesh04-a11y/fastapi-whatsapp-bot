@@ -12,6 +12,7 @@ from database import (
     get_db_conn,
     get_client_by_id,
     get_client_by_phone_number,
+    get_client_by_whatsapp_number,  # ADDED THIS
     get_flow_config,
     get_user_session,
     update_user_session,
@@ -134,6 +135,7 @@ async def process_message(phone: str, name: str, message: str, interactive_data:
         
         client_id = None
         
+        # Handle START_ trigger (QR code scan)
         if message and message.startswith("START_"):
             parts = message.split("_")
             try:
@@ -146,8 +148,23 @@ async def process_message(phone: str, name: str, message: str, interactive_data:
             except ValueError:
                 client_id = None
         
+        # Check session for existing client_id
         if not client_id and session.get('client_id'):
             client_id = session['client_id']
+        
+        # Handle "Greetings" - dynamically route based on receiving WhatsApp number
+        if not client_id and message and message.lower() == 'greetings':
+            if receiving_number:
+                client = get_client_by_whatsapp_number(receiving_number)
+                if client:
+                    client_id = client['id']
+                    logger.info(f"✅ Greetings from {phone} routed to client {client_id} ({client['company_name']}) via number {receiving_number}")
+                else:
+                    await wa.send_text(phone, "Welcome! No business found for this number. Please scan the QR code from the business.")
+                    return
+            else:
+                await wa.send_text(phone, "Welcome! Please scan the QR code provided by the business to start.")
+                return
         
         if not client_id:
             await wa.send_text(phone, "Welcome to Ganpati AI. Please scan the QR code provided by the business to start.")
@@ -198,8 +215,12 @@ async def generate_qr_code(client_id: str):
     try:
         os.makedirs("static/qrcodes", exist_ok=True)
         
-        # Maurya & Maurya's WhatsApp number
-        phone_number = "918595445572"
+        # Get client's WhatsApp number from database
+        client = get_client_by_id(int(client_id))
+        if client and client.get('whatsapp_business_number'):
+            phone_number = client['whatsapp_business_number']
+        else:
+            phone_number = "918595445572"  # Default to Maurya & Maurya
         
         # Create QR code that opens WhatsApp with "Greetings" message
         qr_data = f"https://wa.me/{phone_number}?text=Greetings"
