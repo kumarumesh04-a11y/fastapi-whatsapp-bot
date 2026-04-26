@@ -12,7 +12,7 @@ from database import (
     get_db_conn,
     get_client_by_id,
     get_client_by_phone_number,
-    get_client_by_whatsapp_number,
+    get_client_by_company_name,
     get_flow_config,
     get_user_session,
     update_user_session,
@@ -135,7 +135,7 @@ async def process_message(phone: str, name: str, message: str, interactive_data:
         
         client_id = None
         
-        # Handle START_ trigger (QR code scan) - THIS IS THE PRIMARY METHOD
+        # Handle START_ trigger (backward compatibility)
         if message and message.startswith("START_"):
             parts = message.split("_")
             try:
@@ -148,6 +148,22 @@ async def process_message(phone: str, name: str, message: str, interactive_data:
                 logger.info(f"START_ message detected. Extracted client_id: {client_id}")
             except ValueError:
                 client_id = None
+        
+        # Handle friendly "Greetings from {Company Name}" messages
+        if not client_id and message and message.lower().startswith('greetings from'):
+            # Extract company name from message
+            # Example: "Greetings from MAURYA & MAURYA ADVOCATES"
+            company_part = message[12:]  # Remove "Greetings from "
+            company_name = company_part.strip()
+            
+            # Search for client by company name
+            client = get_client_by_company_name(company_name)
+            if client:
+                client_id = client['id']
+                logger.info(f"✅ Greetings message mapped to client {client_id} ({company_name})")
+            else:
+                await wa.send_text(phone, f"Welcome! We couldn't find '{company_name}'. Please scan the QR code from the business to start.")
+                return
         
         # Check session for existing client_id
         if not client_id and session.get('client_id'):
@@ -202,12 +218,21 @@ async def generate_qr_code(client_id: str):
     try:
         os.makedirs("static/qrcodes", exist_ok=True)
         
-        # Your single WhatsApp business number
+        # Your WhatsApp business number
         phone_number = "918438813814"
         
-        # Create QR code that opens WhatsApp with START_{client_id}
-        # This identifies which client the user is contacting
-        qr_data = f"https://wa.me/{phone_number}?text=START_{client_id}"
+        # Get client details from database
+        client = get_client_by_id(int(client_id))
+        if not client:
+            return JSONResponse(status_code=404, content={"error": "Client not found"})
+        
+        company_name = client['company_name']
+        
+        # Create friendly message with company name
+        friendly_message = f"Greetings from {company_name}"
+        
+        # Create QR code with friendly message
+        qr_data = f"https://wa.me/{phone_number}?text={friendly_message}"
         
         qr = qrcode.QRCode(
             version=1,
@@ -222,7 +247,7 @@ async def generate_qr_code(client_id: str):
         file_path = f"static/qrcodes/{client_id}.png"
         img.save(file_path)
         
-        logger.info(f"QR code generated for client {client_id} with START_{client_id}")
+        logger.info(f"QR code generated for client {client_id}: {friendly_message}")
         
         return FileResponse(file_path, media_type="image/png", filename=f"{client_id}.png")
         

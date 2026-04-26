@@ -86,6 +86,19 @@ def get_client_by_phone_number(phone_number: str) -> Optional[Dict]:
         logger.error(f"Error getting client by phone: {e}")
         return None
 
+def get_client_by_company_name(company_name: str) -> Optional[Dict]:
+    try:
+        with get_db_conn() as conn:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT id, company_name, email, phone, industry_type, subscription_status
+                FROM clients WHERE company_name = %s
+            """, (company_name,))
+            return cursor.fetchone()
+    except Exception as e:
+        logger.error(f"Error getting client by company name: {e}")
+        return None
+    
 def get_client_by_whatsapp_number(whatsapp_number: str) -> Optional[Dict]:
     """
     Get client by their WhatsApp business number
